@@ -38,20 +38,34 @@ contract RandomNumberGenerator {
         } else {
             queue = TESTNET_QUEUE;
         }
+        
+        console.log("Switchboard address:", _switchboard);
+        console.log("Queue ID:", queue);
     }
 
     // Function to request randomness
-    function roll() external {
+    function roll() public {
+        console.log("Starting roll() function");
+        console.log("Current queue:", queue);
+        
         // Make the randomnessId unique for each request (based on sender and timestamp)
         randomnessId = keccak256(abi.encodePacked(msg.sender, block.timestamp));
+        console.log("Generated randomnessId:", randomnessId);
         
-        // Invoke the on-demand contract to request randomness
-        switchboard.requestRandomness(
+        try switchboard.requestRandomness(
             randomnessId,        // Randomness ID (bytes32): Unique ID for the request
             address(this),       // Authority (address): The contract requesting randomness
             queue,               // Queue ID (bytes32): Chain selection for requesting randomness
             30                   // MinSettlementDelay (uint16): Minimum seconds to settle the request
-        );
+        ) {
+            console.log("Randomness request successful");
+        } catch Error(string memory reason) {
+            console.log("Randomness request failed:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("Randomness request failed with low level error");
+            revert("Randomness request failed");
+        }
     }
 
     // Function to resolve randomness after the request is settled
