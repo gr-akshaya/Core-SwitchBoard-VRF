@@ -18,7 +18,7 @@ contract RandomNumberGenerator {
     
     // Queue IDs for mainnet and testnet (pre-configured)
     bytes32 constant MAINNET_QUEUE = 0x86807068432f186a147cf0b13a30067d386204ea9d6c8b04743ac2ef010b0752;
-    bytes32 constant TESTNET_QUEUE = 0xd9cd6a04191d6cd559a5276e69a79cc6f95555deeae498c3a2f8b3ee670287d1;
+    bytes32 constant TESTNET_QUEUE = 0xc9477bfb5ff1012859f336cf98725680e7705ba2abece17188cfb28ca66ca5b0;
 
     // Choose chain-appropriate queue
     bytes32 public queue;
@@ -40,29 +40,26 @@ contract RandomNumberGenerator {
         }
         
         console.log("Switchboard address:", _switchboard);
-        console.log("Queue ID:", queue);
     }
 
     // Function to request randomness
     function roll() public {
         console.log("Starting roll() function");
-        console.log("Current queue:", queue);
         
         // Make the randomnessId unique for each request (based on sender and timestamp)
         randomnessId = keccak256(abi.encodePacked(msg.sender, block.timestamp));
-        console.log("Generated randomnessId:", randomnessId);
         
         try switchboard.requestRandomness(
             randomnessId,        // Randomness ID (bytes32): Unique ID for the request
             address(this),       // Authority (address): The contract requesting randomness
             queue,               // Queue ID (bytes32): Chain selection for requesting randomness
-            30                   // MinSettlementDelay (uint16): Minimum seconds to settle the request
+            1                    // MinSettlementDelay (uint16): Minimum seconds to settle the request
         ) {
             console.log("Randomness request successful");
         } catch Error(string memory reason) {
             console.log("Randomness request failed:", reason);
             revert(reason);
-        } catch (bytes memory lowLevelData) {
+        } catch (bytes memory) {
             console.log("Randomness request failed with low level error");
             revert("Randomness request failed");
         }
@@ -83,16 +80,11 @@ contract RandomNumberGenerator {
         randomNumber = randomness.value;
     }
 
-    function getrandomNumber() public returns (uint256){
-        Structs.RandomnessResult memory randomness = switchboard.getRandomness(randomnessId).result;
-
-        // Ensure that the randomness has been settled
-        require(randomness.settledAt != 0, "Randomness failed to settle");
-
-        // Store the resolved randomness value
-        randomNumber = randomness.value;
-        console.log("randomness.value",randomness.value);
-
+    // Function to get the resolved randomness value
+    function getRandomNumber() public view returns (uint256){
+        if (randomNumber == 0) {
+            revert("Randomness not resolved");
+        }
         return randomNumber;
     }
 }
